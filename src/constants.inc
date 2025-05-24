@@ -20,7 +20,7 @@ BTN_SELECT  = %00100000
 BTN_B       = %01000000
 BTN_A       = %10000000
 
-STATETITLE     = $00  ; displaying title screen
-STATEPLAYING   = $01  ; move paddles/ball, check for collisions
-STATEPAUSE     = $02  ; displaying title screen
+STATEPLAYING   = $00  ; move paddles/ball, check for collisions
+STATEPAUSE     = $01  ; displaying title screen
+STATETITLE     = $02  ; displaying title screen
 STATEGAMEOVER  = $03  ; displaying game over screen

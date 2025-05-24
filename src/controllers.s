@@ -1,7 +1,7 @@
 .include "constants.inc"
 
 .segment "ZEROPAGE"
-.importzp pad1, game_state
+.importzp pad1, game_state, pressed_buttons, released_buttons, last_frame_pad1
 
 .segment "CODE"
 .export read_controller1
@@ -28,9 +28,35 @@ get_buttons:
                   ; and leftmost 0 of pad1 into carry flag
   BCC get_buttons ; Continue until original "1" is in carry flag
 
+  ; newly pressed buttons: not held last frame, and held now
+  lda last_frame_pad1
+  eor #%11111111
+  and pad1
+  sta pressed_buttons
+
+  ; newly released buttons: not held now, and held last frame
+  lda pad1
+  eor #%11111111
+  and last_frame_pad1
+  sta released_buttons
+
   PLA
   TAX
   PLA
   PLP
   RTS
+.endproc
+
+.export check_pause_game
+.proc check_pause_game
+  LDA pressed_buttons
+  AND #BTN_START
+  BEQ done_checking
+  LDA game_state
+  EOR #$01
+  STA game_state
+
+done_checking:
+  RTS
+  
 .endproc

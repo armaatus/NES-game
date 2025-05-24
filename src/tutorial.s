@@ -7,8 +7,11 @@ player_y: .res 1
 scroll: .res 1
 ppuctrl_settings: .res 1
 pad1: .res 1
+pressed_buttons: .res 1
+released_buttons: .res 1
+last_frame_pad1: .res 1
 game_state: .res 1
-.exportzp player_x, player_y, pad1, game_state
+.exportzp player_x, player_y, pad1, game_state, pressed_buttons, released_buttons, last_frame_pad1
 
 .segment "CODE" ; Game logic code
 
@@ -40,14 +43,29 @@ game_state: .res 1
   ; Read the controller input
   JSR read_controller1
 
+  ; Check pausing and unpausing of the game
+  JSR check_pause_game
+  LDA game_state
+  CMP #STATEPLAYING 
+  BNE skip_game_updates
+
+engine_running:
   ; player logic
   JSR Player::update
   JSR Player::draw
 
   ; Scroll
   JSR BackgroundScroll::update
+  JMP finish_nmi
+
+skip_game_updates:
+  JSR Player::draw
   
 finish_nmi:
+  ; Store pad1 to previous pad1
+  LDA pad1
+  STA last_frame_pad1
+
   ; Restore registers
   PLA
   TAY
@@ -64,6 +82,8 @@ finish_nmi:
 .export main
 .proc main
   JSR BackgroundScroll::init
+  LDA #$00
+  STA last_frame_pad1
 
   ; Write a pallete
   LDX PPUSTATUS 
