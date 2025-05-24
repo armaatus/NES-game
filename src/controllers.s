@@ -59,5 +59,4 @@ get_buttons:
 
 done_checking:
   RTS
-  
 .endproc

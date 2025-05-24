@@ -20,7 +20,29 @@ last_frame_pad1: .res 1
 game_state: .res 1
 sleeping: .res 1
 
-; Export
+NUM_ENEMIES = 5
+
+; enemy object pool
+enemy_x_pos: .res NUM_ENEMIES
+enemy_y_pos: .res NUM_ENEMIES
+enemy_x_vels: .res NUM_ENEMIES
+enemy_y_vels: .res NUM_ENEMIES
+enemy_flags: .res NUM_ENEMIES
+current_enemy: .res 1
+current_enemy_type: .res 1
+
+; timer for spawning enemies
+enemy_timer: .res 1
+
+; player bullet pool
+bullet_xs: .res 3
+bullet_ys: .res 3
+
+; export all of this
+.exportzp enemy_x_pos, enemy_y_pos
+.exportzp enemy_x_vels, enemy_y_vels
+.exportzp enemy_flags
+
 .exportzp player_x, player_y, game_state
 .exportzp game_state
 .exportzp pad1, pressed_buttons, released_buttons, last_frame_pad1
@@ -30,6 +52,7 @@ sleeping: .res 1
 ; Import the states
 .include "state/Player.s"
 .include "state/Scroll.s"
+.include "state/Enemy.s"
 
 ; IRQ interupt => interupt request
 .proc irq_handler 
@@ -80,6 +103,7 @@ sleeping: .res 1
 
 .export main
 .proc main
+  JSR Enemy::init
   JSR BackgroundScroll::init
   LDA #$00
   STA last_frame_pad1
@@ -131,15 +155,26 @@ mainloop:
   JSR check_pause_game
   LDA game_state
   CMP #STATEPLAYING 
-  BNE draw_player
+  BNE draw_sprites
 
   JSR Player::update
+  JSR Enemy::process
 
   ; Scroll
   JSR BackgroundScroll::update
 
-draw_player:
+draw_sprites:
   JSR Player::draw
+
+  ; Draw all enemies
+  LDA #$00
+  STA current_enemy
+enemy_drawing:
+  JSR Enemy::draw
+  INC current_enemy
+  LDA current_enemy
+  CMP #NUM_ENEMIES
+  BNE enemy_drawing
 
   ; Store pad1 to previous pad1
   LDA pad1
@@ -168,5 +203,17 @@ palletes:
 .byte $0f, $19, $09, $29
 .byte $0f, $19, $09, $29
 
+enemy_top_lefts:
+.byte $09, $0d
+enemy_top_rights:
+.byte $0b, $0e
+enemy_bottom_lefts:
+.byte $0a, $0f
+enemy_bottom_rights:
+.byte $0c, $10
+
+enemy_palettes:
+.byte $01, $02
+
 .segment "CHR" ; Represents the entire contents of the CHR-ROM
-.incbin "../chr/scrolling.chr"
+.incbin "../chr/objectpools.chr"
