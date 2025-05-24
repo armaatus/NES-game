@@ -2,16 +2,28 @@
 .include "header.inc"
 
 .segment "ZEROPAGE"
+; Player position
 player_x: .res 1
 player_y: .res 1
+
+; Scroll information
 scroll: .res 1
 ppuctrl_settings: .res 1
+
+; Input
 pad1: .res 1
 pressed_buttons: .res 1
 released_buttons: .res 1
 last_frame_pad1: .res 1
+
+; Game state
 game_state: .res 1
-.exportzp player_x, player_y, pad1, game_state, pressed_buttons, released_buttons, last_frame_pad1
+sleeping: .res 1
+
+; Export
+.exportzp player_x, player_y, game_state
+.exportzp game_state
+.exportzp pad1, pressed_buttons, released_buttons, last_frame_pad1
 
 .segment "CODE" ; Game logic code
 
@@ -40,31 +52,19 @@ game_state: .res 1
   STA OAMDMA
   LDA #$00
 
-  ; Read the controller input
-  JSR read_controller1
+  ; set PPUCTRL
+  LDA ppuctrl_settings
+  STA PPUCTRL
 
-  ; Check pausing and unpausing of the game
-  JSR check_pause_game
-  LDA game_state
-  CMP #STATEPLAYING 
-  BNE skip_game_updates
-
-engine_running:
-  ; player logic
-  JSR Player::update
-  JSR Player::draw
-
-  ; Scroll
-  JSR BackgroundScroll::update
-  JMP finish_nmi
-
-skip_game_updates:
-  JSR Player::draw
+  ; set the scroll values
+  LDA #$00 ; X scroll first
+  STA PPUSCROLL
+  LDA scroll ; then Y scroll
+  STA PPUSCROLL
   
-finish_nmi:
-  ; Store pad1 to previous pad1
-  LDA pad1
-  STA last_frame_pad1
+  ; all done
+  LDA #$00
+  STA sleeping
 
   ; Restore registers
   PLA
@@ -72,7 +72,6 @@ finish_nmi:
   PLA
   TAX
   PLA
-
   RTI
 .endproc
 
@@ -124,8 +123,34 @@ vblankwait:       ; wait for another vblank before continuing
   LDA #%00011110  ; turn on screen
   STA PPUMASK
 
-forever:
-  JMP forever
+mainloop:
+  ; Read the controller input
+  JSR read_controller1
+
+  ; Check pausing and unpausing of the game
+  JSR check_pause_game
+  LDA game_state
+  CMP #STATEPLAYING 
+  BNE draw_player
+
+  JSR Player::update
+
+  ; Scroll
+  JSR BackgroundScroll::update
+
+draw_player:
+  JSR Player::draw
+
+  ; Store pad1 to previous pad1
+  LDA pad1
+  STA last_frame_pad1
+
+INC sleeping
+sleep:
+  LDA sleeping
+  BNE sleep
+
+  JMP mainloop
 .endproc
 
 .segment "VECTORS" ; Code that should appear at the very end of the PRG-ROM block

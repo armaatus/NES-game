@@ -1,7 +1,8 @@
 .include "constants.inc"
 
 .segment "ZEROPAGE"
-.importzp pad1, game_state, pressed_buttons, released_buttons, last_frame_pad1
+.importzp pad1, pressed_buttons, released_buttons, last_frame_pad1
+.importzp game_state
 
 .segment "CODE"
 .export read_controller1
