@@ -41,7 +41,7 @@ vblankwait2:
   STA player_x
   LDA #$a0
   STA player_y
-  LDA #$00
+  LDA #STATEPLAYING
   STA game_state
 
   JMP main

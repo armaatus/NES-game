@@ -1,7 +1,7 @@
 .include "constants.inc"
 
 .segment "ZEROPAGE"
-.importzp pad1
+.importzp pad1, game_state
 
 .segment "CODE"
 .export read_controller1
