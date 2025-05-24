@@ -45,7 +45,7 @@ game_state: .res 1
   JSR Player::draw
 
   ; Scroll
-  BackgroundScroll::update
+  JSR BackgroundScroll::update
   
 finish_nmi:
   ; Restore registers
@@ -63,7 +63,7 @@ finish_nmi:
 
 .export main
 .proc main
-  BackgroundScroll::init
+  JSR BackgroundScroll::init
 
   ; Write a pallete
   LDX PPUSTATUS 
