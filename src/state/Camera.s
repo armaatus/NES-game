@@ -6,33 +6,22 @@
   .proc init
     ; Initialize camera at (0,0)
     LDA #$00
-    STA CAMERA_X_LO
-    STA CAMERA_X_HI
-    STA CAMERA_Y_LO
-    STA CAMERA_Y_HI
-    
-    ; Initialize player world position at center of first screen
-    LDA #$80
-    STA PLAYER_WORLD_X_LO
-    LDA #$00
-    STA PLAYER_WORLD_X_HI
-    
-    LDA #$78
-    STA PLAYER_WORLD_Y_LO
-    LDA #$00
-    STA PLAYER_WORLD_Y_HI
-    
+    STA camera_x_lo
+    STA camera_x_hi
+    STA camera_y_lo
+    STA camera_y_hi
+
     RTS
   .endproc
   
   .proc update
     ; Calculate where camera should be centered on player
     ; Target X = Player X - 128 (half screen)
-    LDA PLAYER_WORLD_X_LO
+    LDA player_world_x_lo
     SEC
     SBC #$80
     STA $00  ; temp target lo
-    LDA PLAYER_WORLD_X_HI
+    LDA player_world_x_hi
     SBC #$00
     STA $01  ; temp target hi
     
@@ -40,10 +29,10 @@
     ; Calculate distance from current camera to target
     LDA $00
     SEC
-    SBC CAMERA_X_LO
+    SBC camera_x_lo
     STA $02  ; distance lo
     LDA $01
-    SBC CAMERA_X_HI
+    SBC camera_x_hi
     STA $03  ; distance hi
     
     ; Check if we're outside deadzone
@@ -68,41 +57,41 @@
     JMP check_y_axis
     
   move_camera_left:
-    LDA CAMERA_X_LO
+    LDA camera_x_lo
     SEC
     SBC #CAMERA_SPEED
-    STA CAMERA_X_LO
-    LDA CAMERA_X_HI
+    STA camera_x_lo
+    LDA camera_x_hi
     SBC #$00
-    STA CAMERA_X_HI
+    STA camera_x_hi
     JMP check_y_axis
     
   move_camera_right:
-    LDA CAMERA_X_LO
+    LDA camera_x_lo
     CLC
     ADC #CAMERA_SPEED
-    STA CAMERA_X_LO
-    LDA CAMERA_X_HI
+    STA camera_x_lo
+    LDA camera_x_hi
     ADC #$00
-    STA CAMERA_X_HI
+    STA camera_x_hi
     
   check_y_axis:
     ; Target Y = Player Y - 120 (half screen)
-    LDA PLAYER_WORLD_Y_LO
+    LDA player_world_y_lo
     SEC
     SBC #$78
     STA $00
-    LDA PLAYER_WORLD_Y_HI
+    LDA player_world_y_hi
     SBC #$00
     STA $01
     
     ; Calculate distance
     LDA $00
     SEC
-    SBC CAMERA_Y_LO
+    SBC camera_y_lo
     STA $02
     LDA $01
-    SBC CAMERA_Y_HI
+    SBC camera_y_hi
     STA $03
     
     ; Check deadzone
@@ -125,23 +114,23 @@
     JMP done
     
   move_camera_up:
-    LDA CAMERA_Y_LO
+    LDA camera_y_lo
     SEC
     SBC #CAMERA_SPEED
-    STA CAMERA_Y_LO
-    LDA CAMERA_Y_HI
+    STA camera_y_lo
+    LDA camera_y_hi
     SBC #$00
-    STA CAMERA_Y_HI
+    STA camera_y_hi
     JMP done
     
   move_camera_down:
-    LDA CAMERA_Y_LO
+    LDA camera_y_lo
     CLC
     ADC #CAMERA_SPEED
-    STA CAMERA_Y_LO
-    LDA CAMERA_Y_HI
+    STA camera_y_lo
+    LDA camera_y_hi
     ADC #$00
-    STA CAMERA_Y_HI
+    STA camera_y_hi
     
   done:
     RTS
@@ -150,11 +139,11 @@
   ; Set PPU scroll registers based on camera
   .proc set_scroll
     ; Calculate nametable select bits from camera position
-    LDA CAMERA_X_HI
+    LDA camera_x_hi
     AND #$01
     STA $00  ; X nametable bit
     
-    LDA CAMERA_Y_HI
+    LDA camera_y_hi
     AND #$01
     ASL A
     ORA $00

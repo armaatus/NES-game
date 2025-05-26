@@ -1,7 +1,7 @@
 .include "constants.inc"
 
 .segment "ZEROPAGE"
-.importzp player_x, player_y, game_state
+.importzp game_state
 
 .segment "CODE"
 .import main
@@ -37,10 +37,6 @@ vblankwait2:
   BPL vblankwait2
 
   ; Initialize zero-page values
-  LDA #$80
-  STA player_x
-  LDA #$a0
-  STA player_y
   LDA #STATEPLAYING
   STA game_state
 

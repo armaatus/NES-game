@@ -5,14 +5,24 @@
 ; Player position
 player_x: .res 1
 player_y: .res 1
-CAMERA_X_LO: .res 1
-CAMERA_X_HI: .res 1
-CAMERA_Y_LO: .res 1
-CAMERA_Y_HI: .res 1
-PLAYER_WORLD_X_LO: .res 1
-PLAYER_WORLD_X_HI: .res 1
-PLAYER_WORLD_Y_LO: .res 1
-PLAYER_WORLD_Y_HI: .res 1
+
+player_world_x_lo: .res 1
+player_world_x_hi: .res 1
+player_world_y_lo: .res 1
+player_world_y_hi: .res 1
+
+; Player movement
+target_velocity_x: .res 1
+velocity_x: .res 1
+
+target_velocity_y: .res 1
+velocity_y: .res 1
+
+; Camera positions
+camera_x_lo: .res 1
+camera_x_hi: .res 1
+camera_y_lo: .res 1
+camera_y_hi: .res 1
 
 ; Scroll information
 ppuctrl_settings: .res 1
@@ -50,7 +60,6 @@ bullet_ys: .res 3
 .exportzp enemy_x_vels, enemy_y_vels
 .exportzp enemy_flags
 
-.exportzp player_x, player_y, game_state
 .exportzp game_state
 .exportzp pad1, pressed_buttons, released_buttons, last_frame_pad1
 
@@ -59,7 +68,7 @@ bullet_ys: .res 3
 ; Import the states
 .include "state/Player.s"
 .include "state/Camera.s"
-.include "state/Enemy.s"
+; .include "state/Enemy.s"
 
 ; IRQ interupt => interupt request
 .proc irq_handler 
@@ -91,9 +100,9 @@ bullet_ys: .res 3
   STA PPUCTRL
 
   ; set the scroll values based on camera
-  LDA CAMERA_X_LO
+  LDA camera_x_lo
   STA PPUSCROLL
-  LDA CAMERA_Y_LO
+  LDA camera_y_lo
   STA PPUSCROLL
   
   ; all done
@@ -114,7 +123,9 @@ bullet_ys: .res 3
 
 .export main
 .proc main
-  JSR Enemy::init
+  ; Initialize some zeropage values
+  JSR Player::init
+  ; JSR Enemy::init
   JSR Camera::init
   LDA #$00
   STA last_frame_pad1
@@ -169,7 +180,7 @@ mainloop:
   BNE draw_sprites
 
   JSR Player::update
-  JSR Enemy::process
+  ; JSR Enemy::process
 
   ; Scroll
   JSR Camera::update
@@ -179,14 +190,14 @@ draw_sprites:
   JSR Player::draw
 
   ; Draw all enemies
-  LDA #$00
-  STA current_enemy
-enemy_drawing:
-  JSR Enemy::draw
-  INC current_enemy
-  LDA current_enemy
-  CMP #NUM_ENEMIES
-  BNE enemy_drawing
+;   LDA #$00
+;   STA current_enemy
+; enemy_drawing:
+;   JSR Enemy::draw
+;   INC current_enemy
+;   LDA current_enemy
+;   CMP #NUM_ENEMIES
+;   BNE enemy_drawing
 
   ; Store pad1 to previous pad1
   LDA pad1
