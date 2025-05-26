@@ -179,7 +179,7 @@ mainloop:
   CMP #STATEPLAYING 
   BNE draw_sprites
 
-  JSR Player::update
+  JSR Player::Movement::update
   ; JSR Enemy::process
 
   ; Scroll
