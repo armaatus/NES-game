@@ -5,9 +5,16 @@
 ; Player position
 player_x: .res 1
 player_y: .res 1
+CAMERA_X_LO: .res 1
+CAMERA_X_HI: .res 1
+CAMERA_Y_LO: .res 1
+CAMERA_Y_HI: .res 1
+PLAYER_WORLD_X_LO: .res 1
+PLAYER_WORLD_X_HI: .res 1
+PLAYER_WORLD_Y_LO: .res 1
+PLAYER_WORLD_Y_HI: .res 1
 
 ; Scroll information
-scroll: .res 1
 ppuctrl_settings: .res 1
 
 ; Input
@@ -51,7 +58,7 @@ bullet_ys: .res 3
 
 ; Import the states
 .include "state/Player.s"
-.include "state/Scroll.s"
+.include "state/Camera.s"
 .include "state/Enemy.s"
 
 ; IRQ interupt => interupt request
@@ -64,7 +71,7 @@ bullet_ys: .res 3
   ; Save the registers
   PHA
   TXA
-  PHA
+  PHA 
   TYA
   PHA
 
@@ -79,10 +86,14 @@ bullet_ys: .res 3
   LDA ppuctrl_settings
   STA PPUCTRL
 
-  ; set the scroll values
-  LDA #$00 ; X scroll first
+  ; set PPUCTRL
+  LDA ppuctrl_settings
+  STA PPUCTRL
+
+  ; set the scroll values based on camera
+  LDA CAMERA_X_LO
   STA PPUSCROLL
-  LDA scroll ; then Y scroll
+  LDA CAMERA_Y_LO
   STA PPUSCROLL
   
   ; all done
@@ -104,7 +115,7 @@ bullet_ys: .res 3
 .export main
 .proc main
   JSR Enemy::init
-  JSR BackgroundScroll::init
+  JSR Camera::init
   LDA #$00
   STA last_frame_pad1
 
@@ -124,7 +135,7 @@ load_palletes:
   BNE load_palletes
 
 .import draw_starfield
-.import draw_objects
+; .import draw_objects
 
   LDX #$20
   JSR draw_starfield
@@ -132,7 +143,7 @@ load_palletes:
   LDX #$28
   JSR draw_starfield
 
-  JSR draw_objects
+  ; JSR draw_objects
 
   LDA #%10010000  ; turn on NMIs, sprites use first pattern table
   STA ppuctrl_settings
@@ -161,7 +172,8 @@ mainloop:
   JSR Enemy::process
 
   ; Scroll
-  JSR BackgroundScroll::update
+  JSR Camera::update
+  JSR Camera::set_scroll
 
 draw_sprites:
   JSR Player::draw
