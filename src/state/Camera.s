@@ -1,5 +1,4 @@
 .scope Camera
-  CAMERA_SPEED = 2
   DEADZONE_X = 64  ; Pixels from center before camera moves
   DEADZONE_Y = 64
   
@@ -57,9 +56,18 @@
     JMP check_y_axis
     
   move_camera_left:
+    ; Get absolute value of player's X velocity
+    LDA velocity_x
+    BPL @positive_vel_x
+    EOR #$FF
+    CLC
+    ADC #$01
+  @positive_vel_x:
+    ; Move camera left by player's speed
+    STA $04  ; temp store speed
     LDA camera_x_lo
     SEC
-    SBC #CAMERA_SPEED
+    SBC $04
     STA camera_x_lo
     LDA camera_x_hi
     SBC #$00
@@ -67,9 +75,18 @@
     JMP check_y_axis
     
   move_camera_right:
+    ; Get absolute value of player's X velocity
+    LDA velocity_x
+    BPL @positive_vel_x2
+    EOR #$FF
+    CLC
+    ADC #$01
+  @positive_vel_x2:
+    ; Move camera right by player's speed
+    STA $04  ; temp store speed
     LDA camera_x_lo
     CLC
-    ADC #CAMERA_SPEED
+    ADC $04
     STA camera_x_lo
     LDA camera_x_hi
     ADC #$00
@@ -114,9 +131,18 @@
     JMP done
     
   move_camera_up:
+    ; Get absolute value of player's Y velocity
+    LDA velocity_y
+    BPL @positive_vel_y
+    EOR #$FF
+    CLC
+    ADC #$01
+  @positive_vel_y:
+    ; Move camera up by player's speed
+    STA $04  ; temp store speed
     LDA camera_y_lo
     SEC
-    SBC #CAMERA_SPEED
+    SBC $04
     STA camera_y_lo
     LDA camera_y_hi
     SBC #$00
@@ -124,9 +150,18 @@
     JMP done
     
   move_camera_down:
+    ; Get absolute value of player's Y velocity
+    LDA velocity_y
+    BPL @positive_vel_y2
+    EOR #$FF
+    CLC
+    ADC #$01
+  @positive_vel_y2:
+    ; Move camera down by player's speed
+    STA $04  ; temp store speed
     LDA camera_y_lo
     CLC
-    ADC #CAMERA_SPEED
+    ADC $04
     STA camera_y_lo
     LDA camera_y_hi
     ADC #$00
