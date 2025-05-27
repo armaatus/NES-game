@@ -1,7 +1,26 @@
 .scope Player
+  ; Movement constants
+  MOVE_SPEED = 3          ; Normal movement speed
+  DASH_SPEED = 8          ; Dash burst speed
+  DASH_DURATION = 12      ; Frames dash lasts
+  DASH_COOLDOWN = 30      ; Frames before can dash again
+  FRICTION = 1            ; How quickly we slow down
+  
+  ; Diagonal movement factor (roughly 0.707 * 256 = 181)
+  DIAGONAL_FACTOR = 181
+  
   .proc init
     JSR init_x
     JSR init_y
+    
+    ; Initialize dash and momentum
+    LDA #$00
+    STA dash_timer
+    STA dash_cooldown
+    STA dash_dir_x
+    STA dash_dir_y
+    STA momentum_x
+    STA momentum_y
     RTS
   .endproc
 
@@ -16,9 +35,8 @@
     LDA #$00
     STA player_world_x_hi
 
-    ; Velocity and target velocity
+    ; Velocity
     LDA #$00
-    STA target_velocity_x
     STA velocity_x
     RTS
   .endproc
@@ -34,122 +52,313 @@
     LDA #$00
     STA player_world_y_hi
 
-    ; Velocity and target velocity
+    ; Velocity
     LDA #$00
-    STA target_velocity_y
     STA velocity_y
     RTS
   .endproc
 
   .scope Movement
     .proc update
-      JSR set_target_velocity
-      JSR accelerate_velocity
+      JSR handle_dash
+      JSR handle_movement
+      JSR apply_momentum
       JSR apply_velocity
       JSR bound_position
+      JSR update_timers
       RTS
     .endproc
     
-    .proc set_target_velocity
-      ; Handle X-axis input
-      ; Check if the B button is being pressed and save the state in X
-      LDX #$00
-      LDA pad1
+    .proc handle_dash
+      ; Check if we're already dashing
+      LDA dash_timer
+      BNE @done  ; Still dashing, skip input check
+      
+      ; Check if dash is on cooldown
+      LDA dash_cooldown
+      BNE @done
+      
+      ; Check if B button pressed (dash button)
+      LDA pressed_buttons
       AND #BTN_B
-      BEQ @check_right
-      INX
-    @check_right:
-      ; Check if the right d-pad is down
+      BEQ @done
+      
+      ; Start dash! First get current direction
+      LDA #$00
+      STA dash_dir_x
+      STA dash_dir_y
+      
+      ; Check X direction
       LDA pad1
       AND #BTN_RIGHT
       BEQ @check_left
-      LDA right_velocity, X
-      STA target_velocity_x
-      JMP @handle_y
+      LDA #$01
+      STA dash_dir_x
+      JMP @check_y_dir
+      
     @check_left:
-      ; Check if the left d-pad is down
       LDA pad1
       AND #BTN_LEFT
-      BEQ @no_x_direction
-      LDA left_velocity, X
-      STA target_velocity_x
-      JMP @handle_y
-    @no_x_direction:
-      ; If no X direction is pressed, target velocity is 0
-      LDA #$00
-      STA target_velocity_x
+      BEQ @check_y_dir
+      LDA #$FF  ; -1
+      STA dash_dir_x
       
-    @handle_y:
-      ; Handle Y-axis input
-      ; Check if the up d-pad is down
-      LDA pad1
-      AND #BTN_UP
-      BEQ @check_down
-      LDA up_velocity, X
-      STA target_velocity_y
-      RTS
-    @check_down:
-      ; Check if the down d-pad is down
+    @check_y_dir:
       LDA pad1
       AND #BTN_DOWN
-      BEQ @no_y_direction
-      LDA down_velocity, X
-      STA target_velocity_y
-      RTS
-    @no_y_direction:
-      ; If no Y direction is pressed, target velocity is 0
-      LDA #$00
-      STA target_velocity_y
-      RTS
+      BEQ @check_up
+      LDA #$01
+      STA dash_dir_y
+      JMP @validate_dash
       
-      ; Fixed velocity values
-    right_velocity:
-      .byte $03, $05  
-    left_velocity:
-      .byte $FD, $FB  
-    up_velocity:
-      .byte $FD, $FB  ; Moving up (negative Y)
-    down_velocity:
-      .byte $03, $05  ; Moving down (positive Y)
-    .endproc
-
-    .proc accelerate_velocity
-      ; Handle X-axis acceleration
+    @check_up:
+      LDA pad1
+      AND #BTN_UP
+      BEQ @validate_dash
+      LDA #$FF  ; -1
+      STA dash_dir_y
+      
+    @validate_dash:
+      ; Make sure we have a direction
+      LDA dash_dir_x
+      BNE @start_dash
+      LDA dash_dir_y
+      BNE @start_dash
+      
+      ; No direction, dash forward based on last velocity
       LDA velocity_x
-      CMP target_velocity_x
-      BEQ @handle_y  ; Already at target X, check Y
+      BEQ @check_last_y
+      BMI @dash_left
+      LDA #$01
+      STA dash_dir_x
+      JMP @start_dash
+    @dash_left:
+      LDA #$FF
+      STA dash_dir_x
+      JMP @start_dash
       
-      ; Check if we need to increase or decrease X velocity
-      LDA target_velocity_x
-      SEC
-      SBC velocity_x
-      BMI @decrease_x_velocity
-      
-    @increase_x_velocity:
-      INC velocity_x
-      JMP @handle_y
-      
-    @decrease_x_velocity:
-      DEC velocity_x
-      
-    @handle_y:
-      ; Handle Y-axis acceleration
+    @check_last_y:
       LDA velocity_y
-      CMP target_velocity_y
-      BEQ @done  ; Already at target Y, done
+      BEQ @done  ; No movement at all, don't dash
+      BMI @dash_up
+      LDA #$01
+      STA dash_dir_y
+      JMP @start_dash
+    @dash_up:
+      LDA #$FF
+      STA dash_dir_y
       
-      ; Check if we need to increase or decrease Y velocity
-      LDA target_velocity_y
+    @start_dash:
+      ; Initialize dash
+      LDA #DASH_DURATION
+      STA dash_timer
+      LDA #DASH_COOLDOWN
+      STA dash_cooldown
+      
+    @done:
+      RTS
+    .endproc
+    
+    .proc handle_movement
+      ; If dashing, apply dash velocity
+      LDA dash_timer
+      BEQ @normal_movement
+      
+      ; Calculate dash velocity
+      LDA dash_dir_x
+      BEQ @dash_y
+      BMI @dash_left
+      
+      ; Dash right
+      LDA #DASH_SPEED
+      JMP @store_x_vel
+    @dash_left:
+      LDA #$00
       SEC
-      SBC velocity_y
-      BMI @decrease_y_velocity
+      SBC #DASH_SPEED
       
-    @increase_y_velocity:
-      INC velocity_y
+    @store_x_vel:
+      STA velocity_x
+      
+    @dash_y:
+      LDA dash_dir_y
+      BEQ @check_diagonal_dash
+      BMI @dash_up
+      
+      ; Dash down
+      LDA #DASH_SPEED
+      JMP @store_y_vel
+    @dash_up:
+      LDA #$00
+      SEC
+      SBC #DASH_SPEED
+      
+    @store_y_vel:
+      STA velocity_y
+      
+    @check_diagonal_dash:
+      ; If moving diagonally, normalize speed
+      LDA dash_dir_x
+      BEQ @done
+      LDA dash_dir_y
+      BEQ @done
+      
+      ; Apply diagonal factor (multiply by ~0.707)
+      JSR normalize_diagonal_velocity
       RTS
       
-    @decrease_y_velocity:
-      DEC velocity_y
+    @normal_movement:
+      ; Regular movement input
+      LDA #$00
+      STA velocity_x
+      STA velocity_y
+      
+      ; Check X input
+      LDA pad1
+      AND #BTN_RIGHT
+      BEQ @check_left
+      LDA #MOVE_SPEED
+      STA velocity_x
+      STA momentum_x  ; Set momentum
+      JMP @check_y_input
+      
+    @check_left:
+      LDA pad1
+      AND #BTN_LEFT
+      BEQ @check_y_input
+      LDA #$00
+      SEC
+      SBC #MOVE_SPEED
+      STA velocity_x
+      STA momentum_x  ; Set momentum
+      
+    @check_y_input:
+      LDA pad1
+      AND #BTN_DOWN
+      BEQ @check_up
+      LDA #MOVE_SPEED
+      STA velocity_y
+      STA momentum_y  ; Set momentum
+      JMP @check_diagonal
+      
+    @check_up:
+      LDA pad1
+      AND #BTN_UP
+      BEQ @check_diagonal
+      LDA #$00
+      SEC
+      SBC #MOVE_SPEED
+      STA velocity_y
+      STA momentum_y  ; Set momentum
+      
+    @check_diagonal:
+      ; If moving diagonally, normalize speed
+      LDA velocity_x
+      BEQ @done
+      LDA velocity_y
+      BEQ @done
+      
+      JSR normalize_diagonal_velocity
+      
+    @done:
+      RTS
+    .endproc
+    
+    .proc normalize_diagonal_velocity
+      ; Multiply velocities by diagonal factor (~0.707)
+      ; For X velocity
+      LDA velocity_x
+      BPL @positive_x
+      
+      ; Negative X
+      EOR #$FF
+      CLC
+      ADC #$01  ; Get absolute value
+      TAX
+      LDA #$00
+      SEC
+      SBC diagonal_table,X
+      STA velocity_x
+      JMP @normalize_y
+      
+    @positive_x:
+      TAX
+      LDA diagonal_table,X
+      STA velocity_x
+      
+    @normalize_y:
+      ; For Y velocity
+      LDA velocity_y
+      BPL @positive_y
+      
+      ; Negative Y
+      EOR #$FF
+      CLC
+      ADC #$01  ; Get absolute value
+      TAX
+      LDA #$00
+      SEC
+      SBC diagonal_table,X
+      STA velocity_y
+      RTS
+      
+    @positive_y:
+      TAX
+      LDA diagonal_table,X
+      STA velocity_y
+      RTS
+      
+    ; Lookup table for diagonal speeds (speed * 0.707)
+    diagonal_table:
+      .byte 0, 1, 1, 2, 3, 4, 4, 5, 6  ; 0-8 mapped to diagonal equivalents
+    .endproc
+    
+    .proc apply_momentum
+      ; Only apply momentum if not actively moving
+      LDA dash_timer
+      BNE @done  ; Don't apply momentum during dash
+      
+      ; Check X momentum
+      LDA velocity_x
+      BNE @check_y_momentum  ; Player is actively moving X
+      
+      LDA momentum_x
+      BEQ @check_y_momentum
+      BPL @positive_momentum_x
+      
+      ; Negative momentum
+      CLC
+      ADC #FRICTION
+      STA momentum_x
+      STA velocity_x
+      JMP @check_y_momentum
+      
+    @positive_momentum_x:
+      SEC
+      SBC #FRICTION
+      STA momentum_x
+      STA velocity_x
+      
+    @check_y_momentum:
+      LDA velocity_y
+      BNE @done  ; Player is actively moving Y
+      
+      LDA momentum_y
+      BEQ @done
+      BPL @positive_momentum_y
+      
+      ; Negative momentum
+      CLC
+      ADC #FRICTION
+      STA momentum_y
+      STA velocity_y
+      RTS
+      
+    @positive_momentum_y:
+      SEC
+      SBC #FRICTION
+      STA momentum_y
+      STA velocity_y
       
     @done:
       RTS
@@ -234,6 +443,22 @@
     @done:
       RTS
     .endproc
+    
+    .proc update_timers
+      ; Update dash timer
+      LDA dash_timer
+      BEQ @check_cooldown
+      DEC dash_timer
+      
+    @check_cooldown:
+      ; Update dash cooldown
+      LDA dash_cooldown
+      BEQ @done
+      DEC dash_cooldown
+      
+    @done:
+      RTS
+    .endproc
 
     .proc bound_position
       ; Handle X-axis bounds
@@ -274,6 +499,7 @@
       STA player_world_x_hi
       STA player_x
       STA velocity_x  ; Stop X movement
+      STA momentum_x  ; Stop momentum
       JMP @handle_y_bounds
       
     @bound_right:
@@ -286,6 +512,7 @@
       STA player_x
       LDA #$00
       STA velocity_x  ; Stop X movement
+      STA momentum_x  ; Stop momentum
       
     @handle_y_bounds:
       ; Handle Y-axis bounds
@@ -326,6 +553,7 @@
       STA player_world_y_hi
       STA player_y
       STA velocity_y  ; Stop Y movement
+      STA momentum_y  ; Stop momentum
       RTS
       
     @bound_bottom:
@@ -338,6 +566,7 @@
       STA player_y
       LDA #$00
       STA velocity_y  ; Stop Y movement
+      STA momentum_y  ; Stop momentum
       RTS
     .endproc
   .endscope

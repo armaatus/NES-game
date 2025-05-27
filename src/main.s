@@ -12,11 +12,16 @@ player_world_y_lo: .res 1
 player_world_y_hi: .res 1
 
 ; Player movement
-target_velocity_x: .res 1
 velocity_x: .res 1
-
-target_velocity_y: .res 1
 velocity_y: .res 1
+
+; Boomerang Fu style movement additions
+dash_timer: .res 1      ; Counts down during dash
+dash_cooldown: .res 1   ; Counts down after dash
+dash_dir_x: .res 1      ; Dash direction X (-1, 0, 1)
+dash_dir_y: .res 1      ; Dash direction Y (-1, 0, 1)
+momentum_x: .res 1      ; Current momentum (for sliding)
+momentum_y: .res 1      ; Current momentum
 
 ; Camera positions
 camera_x_lo: .res 1
@@ -54,11 +59,6 @@ enemy_timer: .res 1
 ; player bullet pool
 bullet_xs: .res 3
 bullet_ys: .res 3
-
-; export all of this
-.exportzp enemy_x_pos, enemy_y_pos
-.exportzp enemy_x_vels, enemy_y_vels
-.exportzp enemy_flags
 
 .exportzp game_state
 .exportzp pad1, pressed_buttons, released_buttons, last_frame_pad1
