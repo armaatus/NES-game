@@ -20,6 +20,8 @@
         <h2>Upload PNG Tileset</h2>
         <p class="info-text">
           Import a PNG with 8x8 tiles to convert to NES color restrictions.<br />
+          Image must be exactly <strong>128x128</strong> or
+          <strong>128x256</strong> pixels.<br />
           Each tile will use max 4 colors from the NES palette.
         </p>
         <input type="file" id="fileInput" accept="image/png" />
@@ -188,8 +190,6 @@
             NES_PALETTE[i][1] === color[1] &&
             NES_PALETTE[i][2] === color[2]
           ) {
-            let output = i.toString(16).toUpperCase().padStart(2, "0");
-            return output !== "0D" ? output : "0F";
             return i.toString(16).toUpperCase().padStart(2, "0");
           }
         }
@@ -221,6 +221,19 @@
       }
 
       function processImage(img) {
+        // Validate image dimensions
+        if (
+          !(
+            (img.width === 128 && img.height === 128) ||
+            (img.width === 128 && img.height === 256)
+          )
+        ) {
+          alert(
+            "Error: Image must be exactly 128x128 or 128x256 pixels for CHR conversion tools!",
+          );
+          return;
+        }
+
         const originalCanvas = document.getElementById("originalCanvas");
         const convertedCanvas = document.getElementById("convertedCanvas");
         const sharedPaletteCanvas = document.getElementById(
@@ -254,8 +267,15 @@
         const tilesY = Math.floor(img.height / 8);
 
         // First pass: analyze all tiles and build color usage stats
+        let tileIndex = 0;
         for (let ty = 0; ty < tilesY; ty++) {
           for (let tx = 0; tx < tilesX; tx++) {
+            // Skip empty tiles
+            if (isTileEmpty(imageData, tx * 8, ty * 8)) {
+              tileIndex++;
+              continue;
+            }
+
             const tile = extractTile(imageData, tx * 8, ty * 8);
             const nesColoredTile = tile.map((color) =>
               findClosestNESColor(color),
@@ -273,13 +293,21 @@
         sharedPalette = generateSharedPalette(globalColorUsage);
 
         // Second pass: generate individual palettes and apply conversions
+        tileIndex = 0;
         for (let ty = 0; ty < tilesY; ty++) {
           for (let tx = 0; tx < tilesX; tx++) {
+            // Skip empty tiles but maintain index
+            if (isTileEmpty(imageData, tx * 8, ty * 8)) {
+              tileIndex++;
+              continue;
+            }
+
             const tile = extractTile(imageData, tx * 8, ty * 8);
             const palette = generateTilePalette(tile);
             tilePalettes.push({
               x: tx,
               y: ty,
+              index: tileIndex,
               palette: palette,
             });
 
@@ -300,6 +328,8 @@
               ty * 8,
               sharedPalette,
             );
+
+            tileIndex++;
           }
         }
 
@@ -316,6 +346,25 @@
 
         // Show results
         document.getElementById("results").style.display = "block";
+      }
+
+      function isTileEmpty(imageData, x, y) {
+        // Check if a tile is fully transparent or fully black
+        for (let py = 0; py < 8; py++) {
+          for (let px = 0; px < 8; px++) {
+            const idx = ((y + py) * imageData.width + (x + px)) * 4;
+            const r = imageData.data[idx];
+            const g = imageData.data[idx + 1];
+            const b = imageData.data[idx + 2];
+            const a = imageData.data[idx + 3];
+
+            // If we find any non-black or non-transparent pixel, tile is not empty
+            if (a > 0 && (r > 0 || g > 0 || b > 0)) {
+              return false;
+            }
+          }
+        }
+        return true;
       }
 
       function extractTile(imageData, x, y) {
@@ -541,11 +590,11 @@
         container.appendChild(sharedDiv);
 
         // Show individual tile palettes
-        tilePalettes.forEach((tile, index) => {
+        tilePalettes.forEach((tile) => {
           const div = document.createElement("div");
           div.className = "palette-item";
           div.innerHTML = `
-            <div>Tile ${index} (${tile.x}, ${tile.y})</div>
+            <div>Tile ${tile.index} (${tile.x}, ${tile.y})</div>
             <div class="palette-colors">
               ${tile.palette
                 .map((color) => {
