@@ -1,0 +1,73 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "testLevel.tmx",
+    "expandedProjectPaths": [
+        ".",
+        "Tilesets"
+    ],
+    "fileStates": {
+        "Tilesets/16x16_metatiles.tmx": {
+            "scale": 7.05078125,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 64.03545706371192,
+                "y": 128
+            }
+        },
+        "Tilesets/16x16_metatiles.tsx": {
+            "scaleInDock": 11,
+            "scaleInEditor": 1
+        },
+        "Tilesets/8x8_background_tileset.tsx": {
+            "scaleInDock": 11,
+            "scaleInEditor": 5.5
+        },
+        "Tilesets/test.tmx": {
+            "scale": 7.05078125,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 64.03545706371192,
+                "y": 128
+            }
+        },
+        "testLevel.tmx": {
+            "scale": 3.7604166666666665,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 256.08864265927986,
+                "y": 240.00000000000003
+            }
+        }
+    },
+    "last.exportedFilePath": "C:/Users/Joris/Desktop",
+    "last.imagePath": "C:/Users/Joris/Desktop/NES/NES-game/tiled/test world/Tilesets",
+    "map.height": 32,
+    "map.lastUsedExportFilter": "NES Metatiles (*.asm)",
+    "map.lastUsedFormat": "tmx",
+    "map.tileHeight": 8,
+    "map.tileWidth": 8,
+    "map.width": 16,
+    "openFiles": [
+        "Tilesets/16x16_metatiles.tmx",
+        "Tilesets/8x8_background_tileset.tsx",
+        "Tilesets/16x16_metatiles.tsx",
+        "testLevel.tmx",
+        "Tilesets/test.tmx"
+    ],
+    "project": "testWorld.tiled-project",
+    "recentFiles": [
+        "Tilesets/16x16_metatiles.tmx",
+        "Tilesets/8x8_background_tileset.tsx",
+        "Tilesets/16x16_metatiles.tsx",
+        "Tilesets/test.tmx",
+        "testLevel.tmx"
+    ],
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.tileSize": {
+        "height": 16,
+        "width": 16
+    }
+}
