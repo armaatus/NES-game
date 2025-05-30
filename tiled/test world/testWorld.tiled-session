@@ -3,27 +3,27 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "testLevel.tmx",
+    "activeFile": "Tilesets/16x16_metatiles.tmx",
     "expandedProjectPaths": [
         ".",
         "Tilesets"
     ],
     "fileStates": {
         "Tilesets/16x16_metatiles.tmx": {
-            "scale": 7.05078125,
+            "scale": 8,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": -72.33240997229917,
-                "y": 48.00886426592798
+                "x": 137,
+                "y": 54.9375
             }
         },
         "Tilesets/16x16_metatiles.tsx": {
             "scaleInDock": 11,
-            "scaleInEditor": 1
+            "scaleInEditor": 32
         },
         "Tilesets/8x8_background_tileset.tsx": {
             "scaleInDock": 11,
-            "scaleInEditor": 5.5
+            "scaleInEditor": 32
         },
         "Tilesets/test.tmx": {
             "scale": 7.05078125,
@@ -59,11 +59,11 @@
     ],
     "project": "testWorld.tiled-project",
     "recentFiles": [
-        "Tilesets/16x16_metatiles.tmx",
-        "Tilesets/8x8_background_tileset.tsx",
-        "Tilesets/16x16_metatiles.tsx",
         "Tilesets/test.tmx",
-        "testLevel.tmx"
+        "testLevel.tmx",
+        "Tilesets/16x16_metatiles.tsx",
+        "Tilesets/8x8_background_tileset.tsx",
+        "Tilesets/16x16_metatiles.tmx"
     ],
     "tileset.lastUsedFormat": "tsx",
     "tileset.tileSize": {
