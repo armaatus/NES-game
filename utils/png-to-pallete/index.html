@@ -11,9 +11,9 @@
       <h1>NES Tileset Color Converter - CHR Ready</h1>
       <p class="explain">
         Found myself struggling with creating and even finding tiles for testing
-        my NES game, so this script converts all colors to 4 colors max and the
-        colors of the NES that are closest. It also creates and image with a
-        single pallete that can be imported into PNG to CHR converters
+        my NES game, so this script converts all colors to NES palette colors
+        with proper 3+1 color restrictions. The most common color becomes the
+        shared background/transparent color (index 0) across all palettes.
       </p>
 
       <div class="upload-section">
@@ -22,7 +22,8 @@
           Import a PNG with 8x8 tiles to convert to NES color restrictions.<br />
           Image must be exactly <strong>128x128</strong> or
           <strong>128x256</strong> pixels.<br />
-          Each tile will use max 4 colors from the NES palette.
+          Each tile will use 3 unique colors + 1 shared background color.<br />
+          The most common color becomes the transparent/background color.
         </p>
         <input type="file" id="fileInput" accept="image/png" />
         <button
@@ -88,7 +89,6 @@
     </div>
 
     <div class="color-tooltip" id="colorTooltip" style="display: none"></div>
-
     <script src="main.js"></script>
   </body>
 </html>

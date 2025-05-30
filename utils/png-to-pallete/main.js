@@ -132,6 +132,7 @@ const COLOR_NAMES = {
 let tilePalettes = [];
 let globalColorUsage = {};
 let sharedPalette = null;
+let globalBackgroundColor = null; // Track the global background color
 
 // Initialize NES palette display
 function initializeNESPalette() {
@@ -278,6 +279,9 @@ function processImage(img) {
   // Generate shared palette from most used colors
   sharedPalette = generateSharedPalette(globalColorUsage);
 
+  // Set the global background color (most common color across all tiles)
+  globalBackgroundColor = sharedPalette[0];
+
   // Second pass: generate individual palettes and apply conversions
   tileIndex = 0;
   for (let ty = 0; ty < tilesY; ty++) {
@@ -289,12 +293,23 @@ function processImage(img) {
       }
 
       const tile = extractTile(imageData, tx * 8, ty * 8);
-      const palette = generateTilePalette(tile);
+
+      // Generate two palettes:
+      // 1. Individual palette (each tile picks its own 4 colors)
+      const individualPalette = generateTilePalette(tile);
+
+      // 2. Palette with shared background color
+      const paletteWithSharedBg = generateTilePaletteWithBackground(
+        tile,
+        globalBackgroundColor,
+      );
+
       tilePalettes.push({
         x: tx,
         y: ty,
         index: tileIndex,
-        palette: palette,
+        palette: individualPalette,
+        paletteWithSharedBg: paletteWithSharedBg,
       });
 
       // Apply individual palette to tile
@@ -303,16 +318,16 @@ function processImage(img) {
         convertedData,
         tx * 8,
         ty * 8,
-        palette,
+        individualPalette,
       );
 
-      // Apply shared palette remapping to tile
+      // Apply shared palette remapping to tile (using shared background)
       applySharedPaletteRemapping(
         imageData,
         sharedPaletteData,
         tx * 8,
         ty * 8,
-        palette,
+        paletteWithSharedBg,
         sharedPalette,
       );
 
@@ -373,18 +388,24 @@ function extractTile(imageData, x, y) {
 }
 
 function generateSharedPalette(colorUsage) {
-  // Sort colors by usage and take top 4
+  // Sort colors by usage
   const sorted = Object.entries(colorUsage)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 4)
     .map(([color]) => color.split(",").map(Number));
 
-  // Ensure we have 4 colors
-  while (sorted.length < 4) {
-    sorted.push([0, 0, 0]);
+  // The most common color becomes the background (index 0)
+  const backgroundColor = sorted.length > 0 ? sorted[0] : [0, 0, 0];
+
+  // Take the next 3 most common colors for the palette
+  const paletteColors = sorted.slice(1, 4);
+
+  // Ensure we have exactly 3 palette colors
+  while (paletteColors.length < 3) {
+    paletteColors.push([0, 0, 0]);
   }
 
-  return sorted;
+  // Return with background color at index 0
+  return [backgroundColor, ...paletteColors];
 }
 
 function generateTilePalette(tile) {
@@ -398,18 +419,53 @@ function generateTilePalette(tile) {
     colorCount[key] = (colorCount[key] || 0) + 1;
   });
 
-  // Sort by usage and take top 4
+  // Sort by usage
   const sorted = Object.entries(colorCount)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 4)
     .map(([color]) => color.split(",").map(Number));
 
-  // Ensure we have 4 colors (pad with safe black $0F if needed)
-  while (sorted.length < 4) {
+  // For NES, we need the most common color as background (index 0)
+  // and up to 3 additional colors
+  const backgroundColor = sorted.length > 0 ? sorted[0] : [0, 0, 0];
+  const paletteColors = sorted.slice(1, 4);
+
+  // Ensure we have exactly 3 palette colors
+  while (paletteColors.length < 3) {
+    paletteColors.push([0, 0, 0]); // $0F - safe black
+  }
+
+  // Return with background color at index 0
+  return [backgroundColor, ...paletteColors];
+}
+
+function generateTilePaletteWithBackground(tile, backgroundCol) {
+  // Convert all colors to NES colors first
+  const nesColors = tile.map((color) => findClosestNESColor(color));
+
+  // Count color usage in this tile
+  const colorCount = {};
+  nesColors.forEach((color) => {
+    const key = color.join(",");
+    colorCount[key] = (colorCount[key] || 0) + 1;
+  });
+
+  // Remove the background color from consideration if it exists
+  const bgKey = backgroundCol.join(",");
+  delete colorCount[bgKey];
+
+  // Sort remaining colors by usage and take top 3
+  const sorted = Object.entries(colorCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([color]) => color.split(",").map(Number));
+
+  // Ensure we have exactly 3 palette colors
+  while (sorted.length < 3) {
     sorted.push([0, 0, 0]); // $0F - safe black
   }
 
-  return sorted;
+  // Return with shared background color at index 0
+  return [backgroundCol, ...sorted];
 }
 
 function findClosestNESColor(color) {
@@ -651,28 +707,56 @@ function displayPalettes() {
     <div><strong>Shared Palette (Most Used)</strong></div>
     <div class="palette-colors">
       ${sharedPalette
-        .map((color) => {
+        .map((color, index) => {
           const colorIndex = getNESColorIndex(color);
           const name = getColorName(color);
-          return `<div class="color-box" style="background: rgb(${color.join(",")})" title="${name}">${colorIndex}</div>`;
+          const label = index === 0 ? "BG" : colorIndex;
+          return `<div class="color-box" style="background: rgb(${color.join(",")})" title="${name} (${index === 0 ? "Background" : "Color " + index})">${label}</div>`;
         })
         .join("")}
     </div>
   `;
   container.appendChild(sharedDiv);
 
-  // Show individual tile palettes
+  // Show background color info
+  const bgDiv = document.createElement("div");
+  bgDiv.className = "palette-item";
+  bgDiv.style.background = "#fff3cd";
+  const bgColorIndex = getNESColorIndex(globalBackgroundColor);
+  const bgName = getColorName(globalBackgroundColor);
+  bgDiv.innerHTML = `
+    <div><strong>Global Background Color</strong></div>
+    <div class="palette-colors">
+      <div class="color-box" style="background: rgb(${globalBackgroundColor.join(",")})" title="${bgName}">${bgColorIndex}</div>
+      <div style="margin-left: 10px; align-self: center;">Shared across all palettes (index 0)</div>
+    </div>
+  `;
+  container.appendChild(bgDiv);
+
+  // Show individual tile palettes with shared background
   tilePalettes.forEach((tile) => {
     const div = document.createElement("div");
     div.className = "palette-item";
     div.innerHTML = `
       <div>Tile ${tile.index} (${tile.x}, ${tile.y})</div>
+      <div style="font-size: 0.9em; color: #666; margin: 5px 0;">Individual palette:</div>
       <div class="palette-colors">
         ${tile.palette
-          .map((color) => {
+          .map((color, index) => {
             const colorIndex = getNESColorIndex(color);
             const name = getColorName(color);
             return `<div class="color-box" style="background: rgb(${color.join(",")})" title="${name}">${colorIndex}</div>`;
+          })
+          .join("")}
+      </div>
+      <div style="font-size: 0.9em; color: #666; margin: 5px 0;">With shared BG:</div>
+      <div class="palette-colors">
+        ${tile.paletteWithSharedBg
+          .map((color, index) => {
+            const colorIndex = getNESColorIndex(color);
+            const name = getColorName(color);
+            const label = index === 0 ? "BG" : colorIndex;
+            return `<div class="color-box" style="background: rgb(${color.join(",")}); ${index === 0 ? "border: 2px solid #ff6b6b;" : ""}" title="${name} (${index === 0 ? "Shared BG" : "Color " + index})">${label}</div>`;
           })
           .join("")}
       </div>
