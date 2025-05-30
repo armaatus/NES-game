@@ -3,12 +3,24 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "",
+    "activeFile": "level1.tmx",
     "expandedProjectPaths": [
     ],
     "fileStates": {
+        "level1.tmx": {
+            "scale": 6.832083333333332,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 128.07220833079225,
+                "y": 119.9487711166677
+            }
+        },
+        "tilesets/8x8_tileset.tsx": {
+            "scaleInDock": 8,
+            "scaleInEditor": 1
+        }
     },
-    "last.exportedFilePath": "C:/Users/Joris/Desktop/NES/NES-game/src",
+    "last.exportedFilePath": "C:/Users/Joris/Downloads",
     "last.imagePath": "C:/Users/Joris/Desktop/NES/NES-game/tiled/Assets",
     "map.height": 30,
     "map.lastUsedExportFilter": "Assembly format (6502) (*.asm)",
@@ -17,9 +29,13 @@
     "map.tileWidth": 8,
     "map.width": 32,
     "openFiles": [
+        "tilesets/8x8_tileset.tsx",
+        "level1.tmx"
     ],
     "project": "testWorld.tiled-project",
     "recentFiles": [
+        "tilesets/8x8_tileset.tsx",
+        "level1.tmx"
     ],
     "tileset.lastUsedFormat": "tsx",
     "tileset.tileSize": {
