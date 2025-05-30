@@ -733,6 +733,27 @@ function displayPalettes() {
   `;
   container.appendChild(bgDiv);
 
+  // Get the background palletes
+  const ranking = getTopPalettes(tilePalettes, 6);
+  ranking.forEach((element, index) => {
+    const div = document.createElement("div");
+    div.className = "palette-item";
+    div.innerHTML = `
+      <div>Number ${index + 1} most used palette</div>
+      <div class="palette-colors">
+        ${element.palette
+          .map((color, index) => {
+            const colorIndex = getNESColorIndex(color);
+            const name = getColorName(color);
+            const label = index === 0 ? "BG" : colorIndex;
+            return `<div class="color-box" style="background: rgb(${color.join(",")}); ${index === 0 ? "border: 2px solid #ff6b6b;" : ""}" title="${name} (${index === 0 ? "Shared BG" : "Color " + index})">${label}</div>`;
+          })
+          .join("")}
+      </div>
+    `;
+    container.appendChild(div);
+  });
+
   // Show individual tile palettes with shared background
   tilePalettes.forEach((tile) => {
     const div = document.createElement("div");
@@ -763,6 +784,35 @@ function displayPalettes() {
     `;
     container.appendChild(div);
   });
+}
+
+function getPaletteRanking(tilePalettes) {
+  // Count occurrences of each paletteWithSharedBg
+  const paletteCount = {};
+
+  tilePalettes.forEach((tile) => {
+    const palette = tile.paletteWithSharedBg;
+    // Convert palette to string for comparison (handles arrays/objects)
+    const paletteKey = JSON.stringify(palette);
+    paletteCount[paletteKey] = (paletteCount[paletteKey] || 0) + 1;
+  });
+
+  // Convert to array of objects and sort by count (descending)
+  const ranking = Object.entries(paletteCount)
+    .map(([paletteKey, count]) => ({
+      palette: JSON.parse(paletteKey),
+      count: count,
+      percentage: ((count / tilePalettes.length) * 100).toFixed(2),
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  return ranking;
+}
+
+// Alternative version if you want just the top N results
+function getTopPalettes(tilePalettes, topN = 10) {
+  const ranking = getPaletteRanking(tilePalettes);
+  return ranking.slice(0, topN);
 }
 
 function displayColorStats() {
